@@ -1,0 +1,28 @@
+name = "blend-ybx"
+
+[[tables]]
+name = "actions"
+
+[[tables.columns]]
+name = "action"
+col_type = "BYTEA"
+
+[[tables.columns]]
+name = "timestamp"
+col_type = "BYTEA"
+
+[[tables.columns]]
+name = "ledger"
+col_type = "BYTEA"
+
+[[tables.columns]]
+name = "asset"
+col_type = "BYTEA"
+
+[[tables.columns]]
+name = "source"
+col_type = "BYTEA"
+
+[[tables.columns]]
+name = "amount"
+col_type = "BYTEA"
