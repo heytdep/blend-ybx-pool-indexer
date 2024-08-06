@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use zephyr_sdk::{
     prelude::*,
-    soroban_sdk::{xdr::{ScVal, ScString}, Address, Symbol},
+    soroban_sdk::{xdr::ScVal, Symbol},
+    utils::address_to_alloc_string,
     DatabaseDerive, EnvClient, PrettyContractEvent,
 };
 
@@ -23,12 +24,6 @@ pub struct Actions {
     pub amount: i64,
 }
 
-fn address_to_string(env: &EnvClient, address: ScVal) -> String {
-    let address: Address = env.from_scval(&address);
-    let ScVal::String(ScString(string)) = env.to_scval(address.to_string()) else { panic!()};
-    string.to_string()
-}
-
 impl Actions {
     fn new(
         env: &EnvClient,
@@ -39,8 +34,8 @@ impl Actions {
         amount: i128,
         source: ScVal,
     ) -> Self {
-        let asset = address_to_string(env, asset);
-        let source = address_to_string(env, source);
+        let asset = address_to_alloc_string(env, env.from_scval(&asset));
+        let source = address_to_alloc_string(env, env.from_scval(&source));
         Self {
             action: action as u32,
             timestamp,
@@ -129,7 +124,6 @@ pub extern "C" fn retrieve() {
     env.conclude(&actions)
 }
 
-
 #[cfg(test)]
 mod test {
     use ledger_meta_factory::TransitionPretty;
@@ -138,11 +132,31 @@ mod test {
 
     #[test]
     fn print() {
-        println!("{}", ScVal::Symbol(ScSymbol("supply_collateral".try_into().unwrap())).to_xdr_base64(Limits::none()).unwrap());
-        println!("{}", ScVal::Symbol(ScSymbol("withdraw_collateral".try_into().unwrap())).to_xdr_base64(Limits::none()).unwrap());
-        
-        println!("{}", ScVal::Symbol(ScSymbol("borrow".try_into().unwrap())).to_xdr_base64(Limits::none()).unwrap());
-        println!("{}", ScVal::Symbol(ScSymbol("repay".try_into().unwrap())).to_xdr_base64(Limits::none()).unwrap());
+        println!(
+            "{}",
+            ScVal::Symbol(ScSymbol("supply_collateral".try_into().unwrap()))
+                .to_xdr_base64(Limits::none())
+                .unwrap()
+        );
+        println!(
+            "{}",
+            ScVal::Symbol(ScSymbol("withdraw_collateral".try_into().unwrap()))
+                .to_xdr_base64(Limits::none())
+                .unwrap()
+        );
+
+        println!(
+            "{}",
+            ScVal::Symbol(ScSymbol("borrow".try_into().unwrap()))
+                .to_xdr_base64(Limits::none())
+                .unwrap()
+        );
+        println!(
+            "{}",
+            ScVal::Symbol(ScSymbol("repay".try_into().unwrap()))
+                .to_xdr_base64(Limits::none())
+                .unwrap()
+        );
     }
 
     fn add_deposit(transition: &mut TransitionPretty) {
@@ -155,13 +169,20 @@ mod test {
                     ScVal::Address(stellar_xdr::next::ScAddress::Contract(Hash([8; 32]))),
                     ScVal::Address(stellar_xdr::next::ScAddress::Contract(Hash([1; 32]))),
                 ],
-                ScVal::Vec(Some(ScVec(vec![ScVal::I128(Int128Parts {
-                    hi: 0,
-                    lo: 1000000000,
-                }), ScVal::I128(Int128Parts {
-                    hi: 0,
-                    lo: 500000000,
-                })].try_into().unwrap()))),
+                ScVal::Vec(Some(ScVec(
+                    vec![
+                        ScVal::I128(Int128Parts {
+                            hi: 0,
+                            lo: 1000000000,
+                        }),
+                        ScVal::I128(Int128Parts {
+                            hi: 0,
+                            lo: 500000000,
+                        }),
+                    ]
+                    .try_into()
+                    .unwrap(),
+                ))),
             )
             .unwrap();
     }
@@ -176,13 +197,20 @@ mod test {
                     ScVal::Address(stellar_xdr::next::ScAddress::Contract(Hash([8; 32]))),
                     ScVal::Address(stellar_xdr::next::ScAddress::Contract(Hash([1; 32]))),
                 ],
-                ScVal::Vec(Some(ScVec(vec![ScVal::I128(Int128Parts {
-                    hi: 0,
-                    lo: 1000000000,
-                }), ScVal::I128(Int128Parts {
-                    hi: 0,
-                    lo: 500000000,
-                })].try_into().unwrap()))),
+                ScVal::Vec(Some(ScVec(
+                    vec![
+                        ScVal::I128(Int128Parts {
+                            hi: 0,
+                            lo: 1000000000,
+                        }),
+                        ScVal::I128(Int128Parts {
+                            hi: 0,
+                            lo: 500000000,
+                        }),
+                    ]
+                    .try_into()
+                    .unwrap(),
+                ))),
             )
             .unwrap();
     }
@@ -193,8 +221,12 @@ mod test {
         let mut program = env.new_program("./target/wasm32-unknown-unknown/release/blend_ybx.wasm");
 
         let mut db = env.database("postgres://postgres:postgres@localhost:5432");
-        db.load_table(0, "actions", vec!["action", "timestamp", "ledger", "asset", "source", "amount"])
-            .await;
+        db.load_table(
+            0,
+            "actions",
+            vec!["action", "timestamp", "ledger", "asset", "source", "amount"],
+        )
+        .await;
 
         assert_eq!(db.get_rows_number(0, "actions").await.unwrap(), 0);
 
@@ -231,7 +263,7 @@ mod test {
         assert!(inner_invocation.is_ok());
 
         assert_eq!(db.get_rows_number(0, "actions").await.unwrap(), 3);
-        
+
         db.close().await
     }
 }
